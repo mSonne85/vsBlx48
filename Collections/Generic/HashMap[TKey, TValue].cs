@@ -1672,7 +1672,6 @@ namespace vsBlx48.Collections.Generic
         // This may not be the best solution to get rid of the overhead, but for
         // now this should be better than the old way. If this library continues
         // to grow, this will most likely be replaced by a ThrowHelper class.
-        // This also helps to keep additional references small.
 
         enum Exceptions
         {
