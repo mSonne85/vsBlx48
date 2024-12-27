@@ -18,12 +18,12 @@ namespace vsBlx48.Collections.Generic
         /// <summary>
         /// Gets or sets the value of the first component.
         /// </summary>
-        public T1 First { get => first; set => first = value; } // for release build, property as fast as field
+        public T1 First { get => first; set => first = value; }
 
         /// <summary>
         /// Gets or sets the value of the second component.
         /// </summary>
-        public T2 Second { get => second; set => second = value; } // for release build, property as fast as field
+        public T2 Second { get => second; set => second = value; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Entity{T1, T2}"/> structure.
