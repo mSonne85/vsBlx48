@@ -1,7 +1,3 @@
-﻿//------------------------------------------------------------------------------------------------------------------------------------------------------------------
-// File: "IHashMap[TKey, TValue].cs" | Authors: "Sonne170" | Date: 28.11.2024 | Rev. Date: 28.11.2024 | Version: 1.0.0.0
-//------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 using System;
 using System.Collections.Generic;
 
@@ -14,11 +10,6 @@ namespace vsBlx48.Collections.Generic
     /// <typeparam name="TValue">The type of values in the collection.</typeparam>
     public interface IHashMap<TKey, TValue> : ICollection<Entity<TKey, TValue>>
     {
-        // This interface is basically identical to the IDictionary<TKey, TValue> interface,
-        // but uses the Entity<TKey, TValue> structure instead of KeyValuePair<TKey, TValue>.
-        //
-        // For more information on why this interface does not use KeyValuePair<TKey, TValue>, see Entity.cs
-
         /// <summary>
         /// Gets or sets the element with the specified key.
         /// </summary>
@@ -87,6 +78,6 @@ namespace vsBlx48.Collections.Generic
         /// Performs the specified action on each element of the <see cref="IHashMap{TKey,TValue}"/>.
         /// </summary>
         /// <param name="action">The <see cref="Action{TKey, TValue}"/> delegate to perform on each element.</param>
-        void ForEach(Action<TKey, TValue> action); // alternative approach on IEnumerator
+        void ForEach(Action<TKey, TValue> action);
     }
 }
