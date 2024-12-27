@@ -1,7 +1,3 @@
-﻿//------------------------------------------------------------------------------------------------------------------------------------------------------------------
-// File: "HashMap[T1, T2].cs" | Authors: "Sonne170" | Date: 05.12.2024 | Rev. Date: 28.11.2024 | Version: 1.0.0.0
-//------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -46,18 +42,16 @@ namespace vsBlx48.Collections.Generic
 
         int first           = 0;        // index of the logically first inserted entry
         int last            = 0;        // index of the logically last inserted entry
-        int size            = 0;        // total number of entry including removed entry
+        int size            = 0;
         int freeindex       = -1;       // index of the logically last removed entry
         int freecount       = 0;        // total number of entry removed
-        int[] buckets       = null;     // array whose index is the result of [hashcode % length]
-        Entry[] entries     = null;     // actual array to store the entry
+        int[] buckets       = null;
+        Entry[] entries     = null;
 
-        //---------------------------------------------------------------------------------------------------------
-
-        object tag                          = null;     // optional data associated with the hashmap
-        KeyCollection keys                  = null;     // implementation of IEnumerator<TKey>
-        ValueCollection values              = null;     // implementation of IEnumerator<TValue>
-        IEqualityComparer<TKey> comparer    = null;     // hash code provider and comparer for keys
+        object tag                          = null;
+        KeyCollection keys                  = null;
+        ValueCollection values              = null;
+        IEqualityComparer<TKey> comparer    = null;
 
         //===========================================================================================================================================================
         // CONSTRUCTORS
@@ -155,9 +149,6 @@ namespace vsBlx48.Collections.Generic
         {
             get => comparer; set
             {
-                // yes...the hashmap class allows to change the IEqualityComparer implementation.
-                // Now there is no need to create a new instance to provide a different Comparer.
-
                 if (value == null)
                     value = EqualityComparer<TKey>.Default;
 
@@ -203,12 +194,11 @@ namespace vsBlx48.Collections.Generic
         {
             get => entries.Length; set
             {
-                if (value < size) // caution: we have to pay attention to "freeindex" and "freecount"
+                if (value < size)
                     Throw(Exceptions.ArgumentOutOfRange, nameof(value), msgCapacity);
 
                 // Since the default behavior of Dictionary<TKey, TValue> is to always grow twice its
-                // current size, I decided to add this property to provide more flexibility if needed.
-                // However, keep in mind gaps in the "entries" array are not closed using this property.
+                // current size, this property used to provide more flexibility if needed.
 
                 if (value > entries.Length)
                     EnsureCapacity(GetPrime(value));
@@ -278,7 +268,7 @@ namespace vsBlx48.Collections.Generic
                     if (primes[i] >= size) return primes[i];
             }
 
-            // outside of predefined table, compute the hard way
+            // compute a prime
             if ((uint)size < int.MaxValue)
             {
                 size |= 1; int j; double sqrt;
@@ -307,8 +297,6 @@ namespace vsBlx48.Collections.Generic
                 Array.Copy(entries, 0, newentries, 0, size);
                 int bucket, current = first; do
                 {
-                    // we need to update all the elements in "entries" and
-                    // "buckets" to match the result [hashcode % newsize]
                     ref Entry entry = ref newentries[current];
                     bucket = entry.hashcode % newsize;
                     entry.prior = newbuckets[bucket];
@@ -337,7 +325,7 @@ namespace vsBlx48.Collections.Generic
                     if (entries[i].hashcode == hashcode && comparer.Equals(entries[i].key, key)) return i;
             }
 
-            return -1; // not found
+            return -1;
         }
 
         void Internal_Insert(TKey key, TValue value, bool replace)
@@ -372,14 +360,14 @@ namespace vsBlx48.Collections.Generic
 
             entries[last].next = index;             // link previous entry to current entry
             entries[index].prev = last;             // link current entry to previous entry
-            last = index;                           //
+            last = index;
 
-            entries[index].hashcode = hashcode;     //
-            entries[index].key = key;               // 
-            entries[index].value = value;           //
+            entries[index].hashcode = hashcode;
+            entries[index].key = key;
+            entries[index].value = value;
 
-            entries[index].prior = buckets[bucket]; // buckets[bucket] != -1, index of previous entry with the same bucket
-            buckets[bucket] = index;                // register/ update to the latest index
+            entries[index].prior = buckets[bucket]; // -1 if last otherwise index of previous entry
+            buckets[bucket] = index;
         }
 
         void Internal_InsertRange(Entity<TKey, TValue>[] array, bool? replace)
@@ -416,12 +404,12 @@ namespace vsBlx48.Collections.Generic
                 entries[last].next = index;             // link previous entry to current entry
                 entry.prev = last; last = index;        // link current entry to previous entry
 
-                entry.hashcode = hashcode;              //
-                entry.key = key;                        //
-                entry.value = array[x].Second;          //
+                entry.hashcode = hashcode;
+                entry.key = key;
+                entry.value = array[x].Second;
 
-                entry.prior = buckets[bucket];          // buckets[bucket] != -1, index of previous entry with the same bucket
-                buckets[bucket] = index; MoveNext:;     // register/ update to the latest index
+                entry.prior = buckets[bucket];          // -1 if last otherwise index of previous entry
+                buckets[bucket] = index; MoveNext:;
             }
             entries[first].prev = last;     // link first entry to last entry
             entries[last].next = first;     // link last entry to first entry
@@ -429,10 +417,6 @@ namespace vsBlx48.Collections.Generic
 
         void Internal_InsertRange(KeyValuePair<TKey, TValue>[] array, bool? replace)
         {
-            // Unfortunately, there is no easy way to distinguish between
-            // Entity and KeyValuePair arrays, otherwise there would be
-            // only one InsertRange method...
-
             int count = array.Length, x = size - freecount + count;
             if (x >= entries.Length) EnsureCapacity(GetPrime(x));
 
@@ -443,7 +427,7 @@ namespace vsBlx48.Collections.Generic
                 hashcode = comparer.GetHashCode(key) & 0x7FFFFFFF;
                 bucket = hashcode % buckets.Length;
 
-                if (buckets[bucket] >= 0) { // determine specified key already exists
+                if (buckets[bucket] >= 0) {
                     for (index = buckets[bucket]; index >= 0; index = entries[index].prior)
                         if (entries[index].hashcode == hashcode && comparer.Equals(entries[index].key, key))
                         {
@@ -454,61 +438,59 @@ namespace vsBlx48.Collections.Generic
                         }
                 }
 
-                if (freecount > 0) { index = freeindex; freecount--; // close gaps first
+                if (freecount > 0) { index = freeindex; freecount--;
                     freeindex = entries[index].prior; } else { index = size; size++; }
 
                 ref Entry entry = ref entries[index];
-                entries[last].next = index;             // link previous entry to current entry
-                entry.prev = last; last = index;        // link current entry to previous entry
+                entries[last].next = index;
+                entry.prev = last; last = index;
 
-                entry.hashcode = hashcode;              //
-                entry.key = key;                        //
-                entry.value = array[x].Value;           //
+                entry.hashcode = hashcode;
+                entry.key = key;
+                entry.value = array[x].Value;
 
-                entry.prior = buckets[bucket];          // buckets[bucket] != -1, index of previous entry with the same bucket
-                buckets[bucket] = index; MoveNext:;     // register/ update to the latest index
+                entry.prior = buckets[bucket];
+                buckets[bucket] = index; MoveNext:;
             }
-            entries[first].prev = last;     // link first entry to last entry
-            entries[last].next = first;     // link last entry to first entry
+            entries[first].prev = last;
+            entries[last].next = first;
         }
 
         void CopyEntries(Entry[] source, int start, int count, bool rehash)
         {
             // Creates a clean copy of the source array without copying
-            // it's gaps from removing elements. Only use this method
-            // if "size - freecount == 0"!
+            // it's gaps. Only to use if "size - freecount == 0".
 
-            // if source equals entries => TrimExcess, count is a prime
             if (source != entries) count = GetPrime(count);
 
-            // TrimExcess do not work without temporary array!
+            // TrimExcess do not work without temporary array
             Entry[] temp = new Entry[count]; buckets = new int[count];
             for (int i = 0; i < count; i++) buckets[i] = -1;
 
             int hashcode, bucket;
             int current = start, index = 0, prev = 0; do
             {
-                ref Entry entry = ref source[current];  // take a reference is faster
-                hashcode = !rehash ? entry.hashcode :   // force new hash codes if source comparer != this comparer
+                ref Entry entry = ref source[current];
+                hashcode = !rehash ? entry.hashcode :
                     comparer.GetHashCode(entry.key) & 0x7FFFFFFF;
 
-                temp[prev].next = index;                // link previous entry to current entry
-                temp[index].prev = prev;                // link current entry to previous entry
-                temp[index].hashcode = hashcode;        // 
-                temp[index].key = entry.key;            // 
-                temp[index].value = entry.value;        //
+                temp[prev].next = index;
+                temp[index].prev = prev;
+                temp[index].hashcode = hashcode;
+                temp[index].key = entry.key;
+                temp[index].value = entry.value;
 
-                bucket = hashcode % count;              //
-                temp[index].prior = buckets[bucket];    // buckets[bucket] != -1, index of previous entry with the same bucket
-                buckets[bucket] = index;                // register/ update to the latest index
+                bucket = hashcode % count;
+                temp[index].prior = buckets[bucket];
+                buckets[bucket] = index;
 
                 prev = index; index++;
                 current = entry.next;
             }
             while (current != start);
 
-            temp[first].prev = prev;     // link first entry to last entry
-            temp[prev].next = first;     // link last entry to first entry
+            temp[first].prev = prev;
+            temp[prev].next = first;
 
             first = 0; last = prev; size = index;
             freeindex = -1; freecount = 0; entries = temp;
@@ -517,8 +499,7 @@ namespace vsBlx48.Collections.Generic
         void CopyEntries(Entry[] source, int start, int count, bool rehash, bool? replace)
         {
             // Creates a clean copy of the source array without copying
-            // it's gaps from removing elements. Use this method
-            // if "size - freecount > 0" & "source != this.entries".
+            // it's gaps. To use if "size - freecount > 0" & "source != this.entries".
 
             int x = size - freecount + count;
             if (x >= entries.Length) EnsureCapacity(GetPrime(x));
@@ -526,12 +507,12 @@ namespace vsBlx48.Collections.Generic
             int hashcode, bucket, index;
             int current = start; count = buckets.Length; do 
             {
-                ref Entry entry = ref source[current];  // take a reference is faster
-                hashcode = !rehash ? entry.hashcode :   // force new hash codes if source comparer != this comparer
+                ref Entry entry = ref source[current];
+                hashcode = !rehash ? entry.hashcode :
                     comparer.GetHashCode(entry.key) & 0x7FFFFFFF;
-                bucket = hashcode % count;             // compute the buckets[index]
+                bucket = hashcode % count;
 
-                if (buckets[bucket] >= 0) { // determine specified key already exists
+                if (buckets[bucket] >= 0) {
                     for (index = buckets[bucket]; index >= 0; index = entries[index].prior)
                         if (entries[index].hashcode == hashcode && comparer.Equals(entries[index].key, entry.key))
                         {
@@ -542,26 +523,26 @@ namespace vsBlx48.Collections.Generic
                         }
                 }
 
-                if (freecount > 0) { index = freeindex; freecount--; // close gaps first
+                if (freecount > 0) { index = freeindex; freecount--;
                     freeindex = entries[index].prior; } else { index = size; size++; }
 
-                entries[last].next = index;                 // link previous entry to current entry
-                entries[index].prev = last;                 // link current entry to previous entry
-                last = index;                               //
+                entries[last].next = index;
+                entries[index].prev = last;
+                last = index;
 
-                entries[index].hashcode = hashcode;         //
-                entries[index].key = entry.key;             //
-                entries[index].value = entry.value;         //
+                entries[index].hashcode = hashcode;
+                entries[index].key = entry.key;
+                entries[index].value = entry.value;
 
-                entries[index].prior = buckets[bucket];     // buckets[bucket] != -1, index of previous entry with the same bucket
-                buckets[bucket] = index;                    // register/ update to the latest index
+                entries[index].prior = buckets[bucket];
+                buckets[bucket] = index;
 
                 MoveNext:; current = entry.next;
             }
             while (current != start);
 
-            entries[first].prev = last;        // link first entry to last entry
-            entries[last].next = first;        // link last entry to first entry
+            entries[first].prev = last;
+            entries[last].next = first;
         }
 
         //===========================================================================================================================================================
@@ -589,40 +570,40 @@ namespace vsBlx48.Collections.Generic
         /// <returns><see langword="true"/> if the specified key/value pair was successfully inserted; otherwise <see langword="false"/>.</returns>
         public bool Insert(TKey key, TValue value, bool replace)
         {
-            // for performance reasons, this method is a copy of Insert(TKey, TValue, bool);
+            // for performance reasons, this method is a copy of Internal_Insert(TKey, TValue, bool);
 
             if (key == null) return false;
 
             int hashcode = comparer.GetHashCode(key) & 0x7FFFFFFF;
             int index, bucket = hashcode % buckets.Length;
 
-            if (buckets[bucket] >= 0) { // determine specified key already exists
+            if (buckets[bucket] >= 0) {
                 for (index = buckets[bucket]; index >= 0; index = entries[index].prior)
                     if (entries[index].hashcode == hashcode && comparer.Equals(entries[index].key, key)) {
                         if (!replace) return false; entries[index].value = value; return true; } }
 
-            if (freecount > 0) { index = freeindex; freecount--; // close gaps first
-                freeindex = entries[index].prior; /*see Remove*/ goto AddEntry; }
+            if (freecount > 0) { index = freeindex; freecount--;
+                freeindex = entries[index].prior; goto AddEntry; }
 
             if (size == entries.Length) {
                 EnsureCapacity(GetPrime(entries.Length * 2));
-                bucket = hashcode % buckets.Length; // size of "buckets" changed
+                bucket = hashcode % buckets.Length;
             }
             index = size; size++; AddEntry:;
 
-            entries[first].prev = index;            // link first entry to last entry
-            entries[index].next = first;            // link last entry to first entry
+            entries[first].prev = index;
+            entries[index].next = first;
 
-            entries[last].next = index;             // link previous entry to current entry
-            entries[index].prev = last;             // link current entry to previous entry
-            last = index;                           // update "last" entry index
+            entries[last].next = index;
+            entries[index].prev = last;
+            last = index;
 
-            entries[index].hashcode = hashcode;     //
-            entries[index].key = key;               // 
-            entries[index].value = value;           //
+            entries[index].hashcode = hashcode;
+            entries[index].key = key;
+            entries[index].value = value;
 
-            entries[index].prior = buckets[bucket]; // buckets[bucket] != -1, index of previous entry with the same bucket
-            buckets[bucket] = index;                // register/ update to the latest index
+            entries[index].prior = buckets[bucket];
+            buckets[bucket] = index;
 
             return true;
         }
@@ -637,10 +618,6 @@ namespace vsBlx48.Collections.Generic
         /// <exception cref="ArgumentException"></exception>
         public int AddRange(IEnumerable<Entity<TKey, TValue>> enumerable)
         {
-            // AddRange does not throw any exception if a specified key is null or
-            // already exists. Instead, null keys are ignored and existing entries
-            // are either overwritten or skipped, depending on the "overwrite" value.
-
             if (enumerable == null)
                 Throw(Exceptions.ArgumentNull, nameof(enumerable));
 
@@ -650,7 +627,7 @@ namespace vsBlx48.Collections.Generic
                 {
                     if (table.Count == 0) break;
 
-                    if (size - freecount == 0) { // this instance is empty
+                    if (size - freecount == 0) {
                         CopyEntries(table.entries, table.first, table.Count,
                             table.comparer != comparer); break;
                     }
@@ -670,8 +647,7 @@ namespace vsBlx48.Collections.Generic
                 }
                 default:
                 {
-                    // fallback path for all other enumerables
-                    if (enumerable.Count() > 0)
+                    if (enumerable.Count() > 0) // fallback path
                         Internal_InsertRange(enumerable.ToArray(), null); break;
                 }
             }
@@ -688,10 +664,6 @@ namespace vsBlx48.Collections.Generic
         /// <exception cref="ArgumentException"></exception>
         public int AddRange(IEnumerable<KeyValuePair<TKey, TValue>> enumerable)
         {
-            // AddRange does not throw any exception if a specified key is null or
-            // already exists. Instead, null keys are ignored and existing entries
-            // are either overwritten or skipped, depending on the "overwrite" value.
-
             if (enumerable == null)
                 Throw(Exceptions.ArgumentNull, nameof(enumerable));
 
@@ -710,7 +682,6 @@ namespace vsBlx48.Collections.Generic
                 }
                 default:
                 {
-                    // fallback path for all other enumerables
                     if (enumerable.Count() > 0)
                         Internal_InsertRange(enumerable.ToArray(), null); break;
                 }
@@ -728,10 +699,6 @@ namespace vsBlx48.Collections.Generic
         /// <exception cref="ArgumentNullException"></exception>
         public int InsertRange(IEnumerable<Entity<TKey, TValue>> enumerable, bool replace)
         {
-            // AddRange does not throw any exception if a specified key is null or
-            // already exists. Instead, null keys are ignored and existing entries
-            // are either overwritten or skipped, depending on the "overwrite" value.
-
             if (enumerable == null)
                 Throw(Exceptions.ArgumentNull, nameof(enumerable));
 
@@ -741,7 +708,7 @@ namespace vsBlx48.Collections.Generic
                 {
                     if (table.Count == 0) break;
 
-                    if (size - freecount == 0) { // this instance is empty
+                    if (size - freecount == 0) {
                         CopyEntries(table.entries, table.first, table.Count,
                             table.comparer != comparer); break;
                     }
@@ -755,13 +722,12 @@ namespace vsBlx48.Collections.Generic
                 }
                 case ICollection<Entity<TKey, TValue>> list:
                 {
-                    if (list.Count > 0) { // List<T>, Collection<T>...
+                    if (list.Count > 0) {
                         var temp = new Entity<TKey, TValue>[list.Count];
                         list.CopyTo(temp, 0); Internal_InsertRange(temp, replace); } break;
                 }
                 default:
                 {
-                    // fallback path for all other enumerables
                     if (enumerable.Count() > 0)
                         Internal_InsertRange(enumerable.ToArray(), replace); break;
                 }
@@ -779,10 +745,6 @@ namespace vsBlx48.Collections.Generic
         /// <exception cref="ArgumentNullException"></exception>
         public int InsertRange(IEnumerable<KeyValuePair<TKey, TValue>> enumerable, bool replace)
         {
-            // AddRange does not throw any exception if a specified key is null or
-            // already exists. Instead, null keys are ignored and existing entries
-            // are either overwritten or skipped, depending on the "overwrite" value.
-
             if (enumerable == null)
                 Throw(Exceptions.ArgumentNull, nameof(enumerable));
 
@@ -795,21 +757,18 @@ namespace vsBlx48.Collections.Generic
                 }
                 case ICollection<KeyValuePair<TKey, TValue>> list:
                 {
-                    if (list.Count > 0) { // Dictionary, List<T>, Collection<T>...
+                    if (list.Count > 0) {
                         var temp = new KeyValuePair<TKey, TValue>[list.Count];
                         list.CopyTo(temp, 0); Internal_InsertRange(temp, replace); } break;
                 }
                 default:
                 {
-                    // fallback path for all other enumerables
                     if (enumerable.Count() > 0)
                         Internal_InsertRange(enumerable.ToArray(), replace); break;
                 }
             }
             return size - freecount - oldcount;
         }
-
-        //----------------------------------------------------------------------------------------------------------------------------------------------------------
 
         /// <summary>
         /// Removes the element with the specified key from the hashmap.
@@ -825,14 +784,11 @@ namespace vsBlx48.Collections.Generic
             int hashcode = comparer.GetHashCode(key) & 0x7FFFFFFF;
             int bucket = hashcode % buckets.Length, prev = -1;
 
-            // start with the last entry added whose index is the result of [hashcode % length]
             for (int i = buckets[bucket]; i >= 0; prev = i, i = entries[i].prior)
             {
                 if (entries[i].hashcode == hashcode && comparer.Equals(entries[i].key, key))
                 {
-                    // first match, just update buckets
                     if (prev < 0) buckets[bucket] = entries[i].prior;
-                    // there are more elements with the same bucket
                     else entries[prev].prior = entries[i].prior;
 
                     // current.next.prev == current.prev
@@ -852,7 +808,6 @@ namespace vsBlx48.Collections.Generic
 
                     freeindex = i; freecount++; return true;
                 }
-                //prev = i; // same as above
             }
             return false;
         }
@@ -866,22 +821,17 @@ namespace vsBlx48.Collections.Generic
         /// <exception cref="ArgumentNullException"></exception>
         public bool Remove(TKey key, out TValue value)
         {
-            // for performance reasons, this method is a copy of Remove(TKey key)
-
             if (key == null)
                 Throw(Exceptions.ArgumentNull, nameof(key));
 
             int hashcode = comparer.GetHashCode(key) & 0x7FFFFFFF;
             int bucket = hashcode % buckets.Length, prev = -1;
 
-            // start with the last entry added whose index is the result of [hashcode % length]
             for (int i = buckets[bucket]; i >= 0; prev = i, i = entries[i].prior)
             {
                 if (entries[i].hashcode == hashcode && comparer.Equals(entries[i].key, key))
                 {
-                    // first match, just update buckets
                     if (prev < 0) buckets[bucket] = entries[i].prior;
-                    // there are more elements with the same bucket
                     else entries[prev].prior = entries[i].prior;
 
                     value = entries[i].value;
@@ -903,7 +853,6 @@ namespace vsBlx48.Collections.Generic
 
                     freeindex = i; freecount++; return true;
                 }
-                //prev = i; // same as above
             }
             value = default; return false;
         }
@@ -928,8 +877,6 @@ namespace vsBlx48.Collections.Generic
             }
             else keys = enumerable.ToArray(); // fallback path
             
-            //-----------------------------------------------------------------------------------------
-
             int hashcode, bucket, prev, oldcount = freecount;
             int length = keys.Length; for (int x = 0; x < length; x++)
             {
@@ -942,9 +889,7 @@ namespace vsBlx48.Collections.Generic
                 {
                     if (entries[i].hashcode == hashcode && comparer.Equals(entries[i].key, keys[x]))
                     {
-                        // first match, just update buckets
                         if (prev < 0) buckets[bucket] = entries[i].prior;
-                        // there are more elements with the same bucket
                         else entries[prev].prior = entries[i].prior;
 
                         // current.next.prev == current.prev
@@ -964,13 +909,10 @@ namespace vsBlx48.Collections.Generic
 
                         freeindex = i; freecount++; break;
                     }
-                    //prev = i; // same as above
                 }
             }
             return freecount - oldcount;
         }
-
-        //----------------------------------------------------------------------------------------------------------------------------------------------------------
 
         /// <summary>
         /// Determines whether the hashmap contains the specified key.
@@ -1008,8 +950,6 @@ namespace vsBlx48.Collections.Generic
             }
             while (current != first); return false;
         }
-
-        //----------------------------------------------------------------------------------------------------------------------------------------------------------
 
         /// <summary>
         /// Gets the logically first element added to the hashmap.
@@ -1059,8 +999,6 @@ namespace vsBlx48.Collections.Generic
             value = default;
             return false;
         }
-
-        //----------------------------------------------------------------------------------------------------------------------------------------------------------
 
         /// <summary>
         /// Performs a <see langword="do while"/> iteration and executes the specified action on each element of the hashmap.
@@ -1194,8 +1132,6 @@ namespace vsBlx48.Collections.Generic
             return new Entity<TKey, TValue>[0];
         }
 
-        //----------------------------------------------------------------------------------------------------------------------------------------------------------
-
         /// <summary>
         /// Removes all keys and values from the hashmap.
         /// </summary>
@@ -1298,9 +1234,6 @@ namespace vsBlx48.Collections.Generic
                 item.Second, entries[index].value)) return true;
 
             return false;
-
-            //return index >= 0 && EqualityComparer<TValue>.Default.Equals(
-            //    item.Item2, entries[index].value);
         }
 
         void ICollection<Entity<TKey, TValue>>.CopyTo(Entity<TKey, TValue>[] array, int arrayIndex)
@@ -1334,7 +1267,6 @@ namespace vsBlx48.Collections.Generic
         // NESTED TYPES
         //===========================================================================================================================================================
 
-        [StructLayout(LayoutKind.Sequential)]
         private struct Entry
         {
             public int hashcode;    // lower 31 bits of hash code, -1 if unused
@@ -1351,7 +1283,6 @@ namespace vsBlx48.Collections.Generic
             }
         }
 
-        [StructLayout(LayoutKind.Sequential)]
         public struct Enumerator : IEnumerator<TKey, TValue>
         {
             int index;
@@ -1374,9 +1305,6 @@ namespace vsBlx48.Collections.Generic
             {
                 get
                 {
-                    //if (count == 0 || (count == size + 1))
-                    //    Throw(Exceptions.InvalidOperation, null, msgEnumeration);
-
                     return current.First;
                 }
             }
@@ -1385,9 +1313,6 @@ namespace vsBlx48.Collections.Generic
             {
                 get
                 {
-                    //if (count == 0 || (count == size + 1))
-                    //    Throw(Exceptions.InvalidOperation, null, msgEnumeration);
-
                     return current.Second;
                 }
             }
@@ -1396,9 +1321,6 @@ namespace vsBlx48.Collections.Generic
             {
                 get
                 {
-                    //if (count == 0 || (count == size + 1))
-                    //    Throw(Exceptions.InvalidOperation, null, msgEnumeration);
-
                     return current;
                 }
             }
@@ -1420,28 +1342,7 @@ namespace vsBlx48.Collections.Generic
 
             public void Dispose()
             {
-                // foreach automatically calls dispose
-
-                //-----------------------------------------------------------------------
-
-                // note: IEnumerator does not implement IDisposable
-
-                //using (IEnumerator<T> enumerator = table.GetEnumerator())
-                //{
-                //    while (enumerator.MoveNext())
-                //    {
-                //        // object IEnumerator.Current
-                //        Debug.WriteLine(enumerator.Current);
-                //    }
-                //} automatically calls dispose
-
-                //-----------------------------------------------------------------------
-
-                // while (enumerator.MoveNext())
-                // {
-                //     ...
-                // }
-                // enumerator.Dispose(); // has to be called manually
+                
             }
 
             object IEnumerator.Current
@@ -1572,9 +1473,6 @@ namespace vsBlx48.Collections.Generic
                 {
                     get
                     {
-                        //if (count == 0 || (count == size + 1))
-                        //    Throw(Exceptions.InvalidOperation, null, msgEnumeration);
-
                         return current;
                     }
                 }
@@ -1726,9 +1624,6 @@ namespace vsBlx48.Collections.Generic
                 {
                     get
                     {
-                        //if (count == 0 || (count == size + 1))
-                        //    Throw(Exceptions.InvalidOperation, null, msgEnumeration);
-
                         return current;
                     }
                 }
